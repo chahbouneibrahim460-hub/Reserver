@@ -17,14 +17,13 @@ df = get_reservations(monday.strftime("%Y-%m-%d"), sunday.strftime("%Y-%m-%d"))
 if df.empty:
     st.info("No reservations found for this week.")
 else:
-    # Formatting for display
-    df['reservation_date'] = pd.to_datetime(df['reservation_date']).dt.date
-    df = df.sort_values(['reservation_date', 'slot_start'])
+    df['date'] = pd.to_datetime(df['date']).dt.date
+    df = df.sort_values(['date', 'slot_start'])
     
-    # Pivoting or grouping to show a nice calendar view might be complex in a simple table
-    # Let's just show a clean list/table first
+    # Create a group label column
+    df['group'] = df['group_type'] + " " + df['group_index'].astype(str)
     
-    display_df = df[['reservation_date', 'slot_start', 'slot_end', 'group_name']].copy()
+    display_df = df[['date', 'slot_start', 'slot_end', 'group']].copy()
     display_df.columns = ['Date', 'Start', 'End', 'Group']
     
     st.dataframe(display_df, use_container_width=True, hide_index=True)
@@ -39,6 +38,7 @@ day_df = get_reservations(view_date.strftime("%Y-%m-%d"), view_date.strftime("%Y
 if day_df.empty:
     st.write(f"No reservations for {view_date}.")
 else:
+    day_df['group'] = day_df['group_type'] + " " + day_df['group_index'].astype(str)
     for start, end in day_df[['slot_start', 'slot_end']].drop_duplicates().values:
-        slot_groups = day_df[(day_df['slot_start'] == start) & (day_df['slot_end'] == end)]['group_name'].tolist()
+        slot_groups = day_df[(day_df['slot_start'] == start) & (day_df['slot_end'] == end)]['group'].tolist()
         st.write(f"**{start} - {end}:** {', '.join(slot_groups)}")

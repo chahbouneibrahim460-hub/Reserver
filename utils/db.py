@@ -10,12 +10,12 @@ def get_supabase() -> Client:
     key = st.secrets["supabase"]["key"]
     return create_client(url, key)
 
-def create_reservation(group_name, user_email, reservation_date, slot_start, slot_end, is_weekend):
+def create_reservation(group_type, group_index, user_email, reservation_date, slot_start, slot_end, is_weekend):
     supabase = get_supabase()
     
     # Check if the slot is already full (max 2 groups)
     res = supabase.table("reservations").select("*", count="exact").match({
-        "reservation_date": reservation_date,
+        "date": reservation_date,
         "slot_start": slot_start,
         "slot_end": slot_end
     }).execute()
@@ -32,30 +32,31 @@ def create_reservation(group_name, user_email, reservation_date, slot_start, slo
     sunday_str = sunday.strftime("%Y-%m-%d")
     
     res_group = supabase.table("reservations").select("*", count="exact").match({
-        "group_name": group_name,
-        "is_weekend": is_weekend
-    }).gte("reservation_date", monday_str).lte("reservation_date", sunday_str).execute()
+        "group_type": group_type,
+        "group_index": group_index
+    }).gte("date", monday_str).lte("date", sunday_str).execute()
     
     group_count = res_group.count
     
     # Limits
-    if group_name.startswith("plbd"):
+    if group_type == "plbd":
         limit = 5 if is_weekend else 3
-    else: # bachelor
+    else:  # bachelor
         limit = 6 if is_weekend else 5
         
     if group_count >= limit:
         period = "weekend" if is_weekend else "weekdays"
-        return False, f"Group {group_name} has reached the limit of {limit} reservations for {period} this week."
+        group_label = f"{group_type} {group_index}"
+        return False, f"Group {group_label} has reached the limit of {limit} reservations for {period} this week."
     
     # Create reservation
     data = {
-        "group_name": group_name,
+        "group_type": group_type,
+        "group_index": group_index,
         "user_email": user_email,
-        "reservation_date": reservation_date,
+        "date": reservation_date,
         "slot_start": slot_start,
-        "slot_end": slot_end,
-        "is_weekend": is_weekend
+        "slot_end": slot_end
     }
     try:
         supabase.table("reservations").insert(data).execute()
@@ -69,7 +70,7 @@ def get_reservations(start_date=None, end_date=None):
     query = supabase.table("reservations").select("*")
     
     if start_date and end_date:
-        query = query.gte("reservation_date", start_date).lte("reservation_date", end_date)
+        query = query.gte("date", start_date).lte("date", end_date)
     
     try:
         res = query.execute()
@@ -101,7 +102,11 @@ def verify_token(token):
         return res.data[0]['email']
     return None
 
-def delete_reservation(res_id, group_name):
+def delete_reservation(res_id, group_type, group_index):
     supabase = get_supabase()
-    res = supabase.table("reservations").delete().match({"id": res_id, "group_name": group_name}).execute()
+    res = supabase.table("reservations").delete().match({
+        "id": res_id,
+        "group_type": group_type,
+        "group_index": group_index
+    }).execute()
     return len(res.data) > 0

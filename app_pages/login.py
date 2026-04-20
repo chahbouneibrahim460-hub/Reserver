@@ -4,7 +4,8 @@ from utils.auth import process_login_request, is_authenticated
 st.header("🔑 Login / Identity")
 
 if is_authenticated():
-    st.success(f"You are already logged in as {st.session_state.group_name}.")
+    group_label = f"{st.session_state.group_type} {st.session_state.group_index}"
+    st.success(f"You are already logged in as {group_label}.")
     st.info("You can go to the Reservation page to make a booking.")
     if st.button("Go to Reservation"):
         st.switch_page("app_pages/reservation.py")
@@ -18,10 +19,6 @@ else:
         
         if st.button("Send Login Link"):
             if email:
-                # We need the base URL for the login link
-                # In Streamlit Cloud, it's the public URL.
-                # For local testing, it's usually http://localhost:8501
-                # We can try to get it from context or just ask the user to provide it in secrets
                 base_url = st.secrets.get("general", {}).get("base_url", "http://localhost:8501")
                 
                 success, message = process_login_request(email, base_url)
@@ -35,15 +32,15 @@ else:
     with tab2:
         st.subheader("Bachelor Student Identity")
         st.write("Bachelor groups do not require a login. Please select your group.")
-        bachelor_group = st.selectbox("Select Group", ["Bachelor 1", "Bachelor 2", "Bachelor 3", "Bachelor 4"])
+        bachelor_group = st.selectbox("Select Group", [1, 2, 3, 4], format_func=lambda x: f"Bachelor {x}")
         
         if st.button("Set Identity"):
             st.session_state.logged_in = False
             st.session_state.is_bachelor = True
-            st.session_state.group_name = bachelor_group
             st.session_state.group_type = "bachelor"
+            st.session_state.group_index = bachelor_group
             st.session_state.user_email = None
-            st.success(f"Identity set to {bachelor_group}. You can now make reservations.")
+            st.success(f"Identity set to Bachelor {bachelor_group}. You can now make reservations.")
             st.rerun()
 
 st.divider()

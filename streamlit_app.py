@@ -12,10 +12,10 @@ if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "user_email" not in st.session_state:
     st.session_state.user_email = None
-if "group_name" not in st.session_state:
-    st.session_state.group_name = None
 if "group_type" not in st.session_state:
     st.session_state.group_type = None
+if "group_index" not in st.session_state:
+    st.session_state.group_index = None
 
 # Check for token in URL (login via link)
 check_auth_token()
@@ -38,19 +38,22 @@ pg = st.navigation(pages)
 with st.sidebar:
     st.title("MiniFabLab")
     if is_authenticated():
-        st.success(f"Logged in as: {st.session_state.group_name}")
+        group_label = f"{st.session_state.group_type} {st.session_state.group_index}"
+        st.success(f"Logged in as: {group_label}")
         st.write(f"Email: {st.session_state.user_email}")
         if st.button("Logout"):
             st.session_state.logged_in = False
             st.session_state.user_email = None
-            st.session_state.group_name = None
             st.session_state.group_type = None
+            st.session_state.group_index = None
             st.rerun()
     elif st.session_state.get("is_bachelor", False):
-        st.info(f"Identity: {st.session_state.group_name} (Bachelor)")
+        group_label = f"Bachelor {st.session_state.group_index}"
+        st.info(f"Identity: {group_label}")
         if st.button("Reset Identity"):
             st.session_state.is_bachelor = False
-            st.session_state.group_name = None
+            st.session_state.group_type = None
+            st.session_state.group_index = None
             st.rerun()
     else:
         st.warning("Not logged in (PLBD) or Identity not set (Bachelor)")

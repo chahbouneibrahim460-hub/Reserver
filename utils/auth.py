@@ -1,4 +1,5 @@
 import json
+import re
 import secrets
 from datetime import datetime, timedelta
 import streamlit as st
@@ -13,14 +14,15 @@ def load_plbd_emails():
         return {}
 
 def get_group_by_email(email):
+    """Returns (group_type, group_index) or (None, None)."""
     plbd_data = load_plbd_emails()
-    for group, emails in plbd_data.items():
+    for group_key, emails in plbd_data.items():
         if email.lower() in [e.lower() for e in emails]:
-            return group, "plbd"
+            # Extract index from group key like "plbd7" -> 7
+            match = re.search(r'\d+', group_key)
+            group_index = int(match.group()) if match else 0
+            return "plbd", group_index
     
-    # Check for bachelor groups (assuming user specifies or we handle differently)
-    # The user mentioned 4 bachelor groups without security.
-    # We'll allow them to select their group if they are not in PLBD.
     return None, None
 
 def generate_login_token(email):
@@ -30,8 +32,8 @@ def generate_login_token(email):
     return token
 
 def process_login_request(email, base_url):
-    group, group_type = get_group_by_email(email)
-    if not group:
+    group_type, group_index = get_group_by_email(email)
+    if not group_type:
         return False, "Email not found in PLBD groups. If you are a Bachelor student, no login is required."
     
     token = generate_login_token(email)
@@ -48,11 +50,11 @@ def check_auth_token():
     if token:
         email = verify_token(token)
         if email:
-            group, group_type = get_group_by_email(email)
+            group_type, group_index = get_group_by_email(email)
             st.session_state.logged_in = True
             st.session_state.user_email = email
-            st.session_state.group_name = group
             st.session_state.group_type = group_type
+            st.session_state.group_index = group_index
             # Clear token from URL
             st.query_params.clear()
             return True

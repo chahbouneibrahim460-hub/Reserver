@@ -57,7 +57,10 @@ def create_reservation(group_name, user_email, reservation_date, slot_start, slo
         "slot_end": slot_end,
         "is_weekend": is_weekend
     }
-    supabase.table("reservations").insert(data).execute()
+    try:
+        supabase.table("reservations").insert(data).execute()
+    except Exception as e:
+        return False, f"Database error: {e}"
     
     return True, "Reservation successful!"
 
@@ -68,8 +71,12 @@ def get_reservations(start_date=None, end_date=None):
     if start_date and end_date:
         query = query.gte("reservation_date", start_date).lte("reservation_date", end_date)
     
-    res = query.execute()
-    return pd.DataFrame(res.data)
+    try:
+        res = query.execute()
+        return pd.DataFrame(res.data)
+    except Exception as e:
+        st.error(f"Database error in get_reservations: {e}")
+        return pd.DataFrame()
 
 def save_token(email, token, expires_at):
     supabase = get_supabase()

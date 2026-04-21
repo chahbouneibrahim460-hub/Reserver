@@ -36,8 +36,8 @@ def create_reservation(group_type, group_index, user_email, reservation_date, sl
     if res_slot_group.count >= 1:
         return False, "Votre groupe a déjà une réservation pour ce créneau. Vous ne pouvez pas réserver les deux places."
         
-    # On weekdays, a group can only have 1 active (future/ongoing) weekday reservation at a time
-    if not is_weekend:
+    # Active/Hoarding limits apply only to PLBD groups
+    if group_type == "plbd":
         today_str = datetime.now().strftime("%Y-%m-%d")
         res_future_group = supabase.table("reservations").select("*").match({
             "group_type": group_type,
@@ -45,13 +45,23 @@ def create_reservation(group_type, group_index, user_email, reservation_date, sl
         }).gte("date", today_str).execute()
         
         now = datetime.now()
+        active_weekday_count = 0
+        active_weekend_count = 0
+        
         for r in res_future_group.data:
             r_date = datetime.strptime(r["date"], "%Y-%m-%d")
-            # If it's a weekday
-            if r_date.weekday() < 5:
-                r_end_dt = datetime.strptime(f"{r['date']} {r['slot_end']}", "%Y-%m-%d %H:%M")
-                if now < r_end_dt:
-                    return False, "En semaine, vous ne pouvez avoir qu'une seule réservation active à la fois. Attendez que votre réservation en cours/future se termine."
+            r_end_dt = datetime.strptime(f"{r['date']} {r['slot_end']}", "%Y-%m-%d %H:%M")
+            
+            if now < r_end_dt:
+                if r_date.weekday() < 5:
+                    active_weekday_count += 1
+                else:
+                    active_weekend_count += 1
+                    
+        if not is_weekend and active_weekday_count >= 1:
+            return False, "En semaine, les groupes PLBD ne peuvent avoir qu'une seule réservation active à la fois."
+        if is_weekend and active_weekend_count >= 2:
+            return False, "En week-end, les groupes PLBD ne peuvent avoir que 2 réservations actives à la fois."
     
     # Check if the group has reached its limit for the week
     date_obj = datetime.strptime(reservation_date, "%Y-%m-%d")

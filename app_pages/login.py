@@ -1,5 +1,5 @@
 import streamlit as st
-from utils.auth import process_login_request, is_authenticated
+from utils.auth import process_login_request, is_authenticated, get_group_by_email
 from utils.session import save_session_cookie
 
 st.header("🔑 Connexion / Identité")
@@ -43,15 +43,19 @@ else:
             if not bachelor_email:
                 st.warning("Veuillez entrer votre adresse email.")
             else:
-                st.session_state.logged_in = False
-                st.session_state.is_bachelor = True
-                st.session_state.group_type = "bachelor"
-                st.session_state.group_index = bachelor_group
-                st.session_state.user_email = bachelor_email
-                # Save session to cookie for persistence
-                save_session_cookie()
-                st.success(f"Identité définie sur Bachelor {bachelor_group}. Vous pouvez maintenant faire des réservations.")
-                st.rerun()
+                g_type, g_idx = get_group_by_email(bachelor_email)
+                if g_type == "plbd":
+                    st.error(f"Cette adresse email appartient au groupe PLBD {g_idx}. Veuillez utiliser l'onglet 'Groupes PLBD' pour recevoir votre lien de connexion.")
+                else:
+                    st.session_state.logged_in = False
+                    st.session_state.is_bachelor = True
+                    st.session_state.group_type = "bachelor"
+                    st.session_state.group_index = bachelor_group
+                    st.session_state.user_email = bachelor_email
+                    # Save session to cookie for persistence
+                    save_session_cookie()
+                    st.success(f"Identité définie sur Bachelor {bachelor_group}. Vous pouvez maintenant faire des réservations.")
+                    st.rerun()
 
 st.divider()
 st.info("Remarque : Les groupes PLBD sont limités à 3 réservations en semaine et 5 le week-end. Les groupes Bachelor sont limités à 5 en semaine et 6 le week-end.")

@@ -77,7 +77,6 @@ pdf.chapter_body(text3)
 # Section 4
 pdf.chapter_title(4, "Support et Administration")
 text4 = (
-    "L'application garde votre session active grâce à des cookies persistants. Si vous revenez le lendemain, vous n'aurez plus besoin de demander un email de connexion !\n\n"
     "En de rares occasions, l'administration peut être amenée à suspendre globalement toute réservation pour des raisons de maintenance. Vous en serez avertis via la plateforme.\n\n"
     "Si vous constatez un problème technique d'accès, une erreur dans vos crédits, ou un bug lors d'une annulation de réservation, merci de contacter d'urgence l'administration : \n"
     "- anwar.mounir@centrale-casablanca.ma\n"

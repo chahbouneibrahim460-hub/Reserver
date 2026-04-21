@@ -1,4 +1,6 @@
 import json
+import hmac
+import hashlib
 import streamlit as st
 import streamlit.components.v1 as components
 from datetime import datetime, timedelta
@@ -16,7 +18,13 @@ def save_session_cookie():
         "group_type": st.session_state.get("group_type"),
         "group_index": st.session_state.get("group_index"),
     }
-    cookie_value = quote(json.dumps(session_data))
+    # Securely sign the cookie using the app's secret key
+    secret_key = st.secrets["supabase"]["key"].encode()
+    data_str = json.dumps(session_data, sort_keys=True)
+    signature = hmac.new(secret_key, data_str.encode(), hashlib.sha256).hexdigest()
+    signed_payload = f"{signature}|{data_str}"
+    
+    cookie_value = quote(signed_payload)
     expiry_days = COOKIE_EXPIRY_DAYS
     
     # Inject JavaScript to set the cookie
@@ -60,7 +68,19 @@ def load_session_from_cookie():
         if not cookie_value:
             return False
         
-        session_data = json.loads(unquote(cookie_value))
+        signed_payload = unquote(cookie_value)
+        if "|" not in signed_payload:
+            return False
+            
+        signature, data_str = signed_payload.split("|", 1)
+        secret_key = st.secrets["supabase"]["key"].encode()
+        expected_sig = hmac.new(secret_key, data_str.encode(), hashlib.sha256).hexdigest()
+        
+        if not hmac.compare_digest(signature, expected_sig):
+            # Potential tampering detected
+            return False
+            
+        session_data = json.loads(data_str)
         
         # Only restore if there's actual session data
         if not session_data.get("group_type"):

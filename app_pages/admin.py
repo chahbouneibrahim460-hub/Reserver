@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
-from datetime import date, timedelta
+from datetime import datetime, date, timedelta
+from zoneinfo import ZoneInfo
 from utils.admin import is_admin
 from utils.db import (
     get_reservations, admin_delete_reservation, admin_create_reservation,
@@ -47,7 +48,7 @@ with acol2:
     else:
         admin_group_index = st.selectbox("Numéro de Groupe", [1, 2, 3, 4], key="admin_gi_b")
 
-admin_date = st.date_input("Date", value=date.today(), key="admin_date")
+admin_date = st.date_input("Date", value=datetime.now(ZoneInfo("Africa/Casablanca")).date(), key="admin_date")
 is_weekend = admin_date.weekday() >= 5
 
 if is_weekend:
@@ -74,7 +75,7 @@ st.divider()
 st.subheader("🗑️ Gérer Toutes les Réservations")
 
 view_range = st.selectbox("Vue", ["Cette semaine", "Semaine prochaine", "Tout le futur"], key="admin_view")
-today = date.today()
+today = datetime.now(ZoneInfo("Africa/Casablanca")).date()
 monday = today - timedelta(days=today.weekday())
 
 if view_range == "Cette semaine":
@@ -94,13 +95,16 @@ if df.empty:
 else:
     df = df.sort_values(['date', 'slot_start'])
     df['group'] = df['group_type'] + " " + df['group_index'].astype(str)
+    
+    csv = df.to_csv(index=False).encode('utf-8')
+    st.download_button("📥 Télécharger (CSV)", data=csv, file_name=f"reservations.csv", mime="text/csv")
 
     for idx, row in df.iterrows():
-        c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
+        c1, c2, c3, c4 = st.columns([2, 2, 3, 1])
         c1.write(f"**{row['date']}**")
         c2.write(f"{row['slot_start']} - {row['slot_end']}")
-        c3.write(f"{row['group']}")
-        if c4.button("🗑️ Supprimer", key=f"adel_{row['id']}"):
+        c3.write(f"{row['group']} ({row.get('user_email', 'N/A')})")
+        if c4.button("🗑️", key=f"adel_{row['id']}"):
             if admin_delete_reservation(row['id']):
                 st.success(f"Réservation de {row['group']} le {row['date']} supprimée")
                 st.rerun()

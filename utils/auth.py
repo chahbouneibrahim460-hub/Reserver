@@ -2,6 +2,7 @@ import json
 import re
 import secrets
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 import streamlit as st
 from utils.db import save_token, verify_token
 from utils.email_utils import send_login_link
@@ -27,7 +28,7 @@ def get_group_by_email(email):
 
 def generate_login_token(email):
     token = secrets.token_urlsafe(32)
-    expires_at = datetime.now() + timedelta(hours=1)
+    expires_at = datetime.now(ZoneInfo("Africa/Casablanca")) + timedelta(hours=1)
     save_token(email, token, expires_at)
     return token
 
@@ -48,6 +49,9 @@ def check_auth_token():
     """Check query params for token and restore session. Saves cookie for persistence."""
     token = st.query_params.get("token")
     if token:
+        from utils.db import clean_expired_tokens
+        clean_expired_tokens() # Run housekeeping
+        
         email = verify_token(token)
         if email:
             group_type, group_index = get_group_by_email(email)

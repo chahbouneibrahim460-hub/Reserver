@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime, date, timedelta
+from zoneinfo import ZoneInfo
 from utils.db import create_reservation, get_reservations, delete_reservation, get_reservations_paused
 from utils.email_utils import send_reservation_confirmation
 
@@ -24,7 +25,7 @@ if get_reservations_paused():
     st.stop()
 
 # Date selection
-today = date.today()
+today = datetime.now(ZoneInfo("Africa/Casablanca")).date()
 max_date = today + timedelta(days=14) # Allow booking 2 weeks in advance
 selected_date = st.date_input("Sélectionner une Date", min_value=today, max_value=max_date, value=today)
 
@@ -111,7 +112,7 @@ if not my_res.empty:
             c2.write(f"{row['slot_start']} - {row['slot_end']}")
             
             res_dt = datetime.strptime(f"{row['date']} {row['slot_start']}", "%Y-%m-%d %H:%M")
-            cannot_cancel = datetime.now() > res_dt - timedelta(hours=1)
+            cannot_cancel = datetime.now(ZoneInfo("Africa/Casablanca")).replace(tzinfo=None) > res_dt - timedelta(hours=1)
             
             if c3.button("Annuler", key=f"del_{row['id']}", disabled=cannot_cancel, help="Annulation impossible à moins d'1h" if cannot_cancel else "Annuler cette réservation"):
                 if delete_reservation(row['id'], group_type, group_index):

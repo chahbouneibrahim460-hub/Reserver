@@ -1,5 +1,6 @@
 import pandas as pd
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 import streamlit as st
 from supabase import create_client, Client
 
@@ -38,13 +39,13 @@ def create_reservation(group_type, group_index, user_email, reservation_date, sl
         
     # Active/Hoarding limits apply only to PLBD groups
     if group_type == "plbd":
-        today_str = datetime.now().strftime("%Y-%m-%d")
+        today_str = datetime.now(ZoneInfo("Africa/Casablanca")).strftime("%Y-%m-%d")
         res_future_group = supabase.table("reservations").select("*").match({
             "group_type": group_type,
             "group_index": group_index
         }).gte("date", today_str).execute()
         
-        now = datetime.now()
+        now = datetime.now(ZoneInfo("Africa/Casablanca")).replace(tzinfo=None)
         active_weekday_count = 0
         active_weekend_count = 0
         
@@ -134,12 +135,22 @@ def save_token(email, token, expires_at):
 
 def verify_token(token):
     supabase = get_supabase()
-    now = datetime.now().isoformat()
+    now_dt = datetime.now(ZoneInfo("Africa/Casablanca"))
+    now = now_dt.isoformat()
     res = supabase.table("auth_tokens").select("email").match({"token": token}).gt("expires_at", now).execute()
     
     if res.data:
         return res.data[0]['email']
     return None
+
+def clean_expired_tokens():
+    """Housekeeping: remove expired tokens from DB"""
+    supabase = get_supabase()
+    now = datetime.now(ZoneInfo("Africa/Casablanca")).isoformat()
+    try:
+        supabase.table("auth_tokens").delete().lt("expires_at", now).execute()
+    except Exception:
+        pass
 
 def delete_reservation(res_id, group_type, group_index):
     supabase = get_supabase()

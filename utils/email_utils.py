@@ -9,13 +9,14 @@ def send_email(to_email, subject, body):
         st.error("Email secrets not configured. Please add SMTP details to .streamlit/secrets.toml")
         return False
         
-    smtp_server = "smtp.gmail.com"
+    smtp_server = "smtp-relay.brevo.com"
     smtp_port = 587
-    smtp_user = st.secrets["email"]["user"] # minifablabecc@outlook.com
+    smtp_user = st.secrets["email"]["user"]
     smtp_password = st.secrets["email"]["password"]
+    sender_email = st.secrets.get("email", {}).get("sender", smtp_user)
 
     msg = MIMEMultipart()
-    msg['From'] = smtp_user
+    msg['From'] = sender_email
     msg['To'] = to_email
     msg['Subject'] = subject
 

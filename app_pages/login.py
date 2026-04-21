@@ -13,9 +13,12 @@ else:
     with tab1:
         st.subheader("Connexion Étudiant PLBD")
         st.write("Entrez votre email de l'école pour recevoir un lien de connexion.")
-        email = st.text_input("Email de l'école", placeholder="prenom.nom@centrale-casablanca.ma", key="plbd_email")
         
-        if st.button("Envoyer le lien de connexion"):
+        with st.form("plbd_login_form"):
+            email = st.text_input("Email de l'école", placeholder="prenom.nom@centrale-casablanca.ma", key="plbd_email")
+            submitted = st.form_submit_button("Envoyer le lien de connexion")
+        
+        if submitted:
             if email:
                 base_url = st.secrets.get("general", {}).get("base_url", "http://localhost:8501")
                 
@@ -30,10 +33,13 @@ else:
     with tab2:
         st.subheader("Identité Étudiant Bachelor")
         st.write("Sélectionnez votre groupe et entrez votre email pour le suivi des réservations.")
-        bachelor_group = st.selectbox("Sélectionner le Groupe", [1, 2, 3, 4], format_func=lambda x: f"Bachelor {x}")
-        bachelor_email = st.text_input("Votre Email", placeholder="votre.email@example.com", key="bachelor_email")
         
-        if st.button("Définir l'Identité"):
+        with st.form("bachelor_identity_form"):
+            bachelor_group = st.selectbox("Sélectionner le Groupe", [1, 2, 3, 4], format_func=lambda x: f"Bachelor {x}")
+            bachelor_email = st.text_input("Votre Email", placeholder="votre.email@example.com", key="bachelor_email")
+            submitted = st.form_submit_button("Définir l'Identité")
+        
+        if submitted:
             if not bachelor_email:
                 st.warning("Veuillez entrer votre adresse email.")
             else:

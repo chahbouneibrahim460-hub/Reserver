@@ -57,9 +57,7 @@ def check_auth_token():
             st.session_state.group_index = group_index
             # Save session to cookie for persistence
             from utils.session import save_session_cookie
-            cookie_manager = st.session_state.get("_cookie_manager")
-            if cookie_manager:
-                save_session_cookie(cookie_manager)
+            save_session_cookie()
             # Clear token from URL
             st.query_params.clear()
             return True

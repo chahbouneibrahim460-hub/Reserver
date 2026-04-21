@@ -45,7 +45,7 @@ def process_login_request(email, base_url):
         return False, "Failed to send email. Please try again later."
 
 def check_auth_token():
-    # Check query params for token
+    """Check query params for token and restore session. Saves cookie for persistence."""
     token = st.query_params.get("token")
     if token:
         email = verify_token(token)
@@ -55,6 +55,11 @@ def check_auth_token():
             st.session_state.user_email = email
             st.session_state.group_type = group_type
             st.session_state.group_index = group_index
+            # Save session to cookie for persistence
+            from utils.session import save_session_cookie
+            cookie_manager = st.session_state.get("_cookie_manager")
+            if cookie_manager:
+                save_session_cookie(cookie_manager)
             # Clear token from URL
             st.query_params.clear()
             return True

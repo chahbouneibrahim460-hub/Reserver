@@ -1,5 +1,6 @@
 import streamlit as st
 from utils.auth import process_login_request, is_authenticated
+from utils.session import save_session_cookie
 
 st.header("🔑 Login / Identity")
 
@@ -50,6 +51,10 @@ else:
                 st.session_state.group_type = "bachelor"
                 st.session_state.group_index = bachelor_group
                 st.session_state.user_email = bachelor_email
+                # Save session to cookie for persistence
+                cookie_manager = st.session_state.get("_cookie_manager")
+                if cookie_manager:
+                    save_session_cookie(cookie_manager)
                 st.success(f"Identity set to Bachelor {bachelor_group}. You can now make reservations.")
                 st.rerun()
 

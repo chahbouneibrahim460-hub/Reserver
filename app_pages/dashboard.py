@@ -5,40 +5,78 @@ from datetime import date, timedelta
 
 st.header("📊 Current Schedule")
 
-# Filters
+# Week selector
 today = date.today()
 monday = today - timedelta(days=today.weekday())
 sunday = monday + timedelta(days=6)
 
-st.write(f"Showing reservations for the current week: **{monday}** to **{sunday}**")
+week_options = {
+    "This Week": monday,
+    "Next Week": monday + timedelta(days=7),
+}
+selected_week = st.selectbox("Select Week", list(week_options.keys()))
+week_start = week_options[selected_week]
+week_end = week_start + timedelta(days=6)
 
-df = get_reservations(monday.strftime("%Y-%m-%d"), sunday.strftime("%Y-%m-%d"))
+st.write(f"Showing reservations: **{week_start.strftime('%a %d %b')}** to **{week_end.strftime('%a %d %b %Y')}**")
 
-if df.empty:
-    st.info("No reservations found for this week.")
-else:
-    df['date'] = pd.to_datetime(df['date']).dt.date
-    df = df.sort_values(['date', 'slot_start'])
+df = get_reservations(week_start.strftime("%Y-%m-%d"), week_end.strftime("%Y-%m-%d"))
+
+# Define all possible slots
+weekday_slots = [("18:00", "20:30"), ("20:30", "23:00")]
+weekend_slots = [
+    ("10:30", "13:00"), ("13:00", "15:30"), ("15:30", "18:00"),
+    ("18:00", "20:30"), ("20:30", "23:00")
+]
+
+# Build the schedule table
+days = []
+current_day = week_start
+while current_day <= week_end:
+    days.append(current_day)
+    current_day += timedelta(days=1)
+
+# Create a table for each day
+for day in days:
+    is_weekend = day.weekday() >= 5
+    slots = weekend_slots if is_weekend else weekday_slots
+    day_label = day.strftime("%A %d %b")
+    weekend_tag = " 🟢" if is_weekend else ""
     
-    # Create a group label column
-    df['group'] = df['group_type'] + " " + df['group_index'].astype(str)
+    st.subheader(f"{day_label}{weekend_tag}")
     
-    display_df = df[['date', 'slot_start', 'slot_end', 'group']].copy()
-    display_df.columns = ['Date', 'Start', 'End', 'Group']
+    if df.empty:
+        day_df = pd.DataFrame()
+    else:
+        day_df = df[df['date'] == day.strftime("%Y-%m-%d")]
     
-    st.dataframe(display_df, use_container_width=True, hide_index=True)
-
-st.divider()
-
-# Detailed view per day
-st.subheader("Daily Breakdown")
-view_date = st.date_input("Select a day to view details", value=today)
-day_df = get_reservations(view_date.strftime("%Y-%m-%d"), view_date.strftime("%Y-%m-%d"))
-
-if day_df.empty:
-    st.write(f"No reservations for {view_date}.")
-else:
-    day_df['group'] = day_df['group_type'] + " " + day_df['group_index'].astype(str)
-    for start, end in day_df[['slot_start', 'slot_end']].drop_duplicates().values:
-        slot_groups = day_df[(day_df['slot_start'] == start) & (day_df['slot_end'] == end)]['group'].tolist()
-        st.write(f"**{start} - {end}:** {', '.join(slot_groups)}")
+    # Build table data for this day
+    table_data = []
+    for start, end in slots:
+        slot_label = f"{start} - {end}"
+        if day_df.empty:
+            groups = []
+        else:
+            slot_rows = day_df[(day_df['slot_start'] == start) & (day_df['slot_end'] == end)]
+            groups = (slot_rows['group_type'] + " " + slot_rows['group_index'].astype(str)).tolist()
+        
+        occupancy = len(groups)
+        group_1 = groups[0] if len(groups) >= 1 else "—"
+        group_2 = groups[1] if len(groups) >= 2 else "—"
+        
+        if occupancy >= 2:
+            status = "🔴 Full"
+        elif occupancy == 1:
+            status = "🟡 1/2"
+        else:
+            status = "🟢 Open"
+        
+        table_data.append({
+            "Slot": slot_label,
+            "Group 1": group_1,
+            "Group 2": group_2,
+            "Status": status
+        })
+    
+    table_df = pd.DataFrame(table_data)
+    st.table(table_df)

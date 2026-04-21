@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime, date, timedelta
-from utils.db import create_reservation, get_reservations, delete_reservation
+from utils.db import create_reservation, get_reservations, delete_reservation, get_reservations_paused
 from utils.email_utils import send_reservation_confirmation
 
 st.header("📅 Make a Reservation")
@@ -18,6 +18,10 @@ user_email = st.session_state.get("user_email")
 group_label = f"{group_type} {group_index}"
 
 st.info(f"Booking for: **{group_label}**")
+
+if get_reservations_paused():
+    st.error("🔴 **Reservations are currently paused by the administrator.** You cannot make new reservations at this time.")
+    st.stop()
 
 # Date selection
 today = date.today()

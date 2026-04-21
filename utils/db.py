@@ -110,3 +110,62 @@ def delete_reservation(res_id, group_type, group_index):
         "group_index": group_index
     }).execute()
     return len(res.data) > 0
+
+def admin_delete_reservation(res_id):
+    """Admin: delete any reservation by ID regardless of group."""
+    supabase = get_supabase()
+    res = supabase.table("reservations").delete().eq("id", res_id).execute()
+    return len(res.data) > 0
+
+def admin_create_reservation(group_type, group_index, user_email, reservation_date, slot_start, slot_end):
+    """Admin: create a reservation bypassing all limits (still checks slot capacity)."""
+    supabase = get_supabase()
+    
+    # Still check if slot is full (max 2)
+    res = supabase.table("reservations").select("*", count="exact").match({
+        "date": reservation_date,
+        "slot_start": slot_start,
+        "slot_end": slot_end
+    }).execute()
+    
+    if res.count >= 2:
+        return False, "This slot is already fully booked (max 2 groups)."
+    
+    data = {
+        "group_type": group_type,
+        "group_index": group_index,
+        "user_email": user_email,
+        "date": reservation_date,
+        "slot_start": slot_start,
+        "slot_end": slot_end
+    }
+    try:
+        supabase.table("reservations").insert(data).execute()
+    except Exception as e:
+        return False, f"Database error: {e}"
+    
+    return True, "Reservation successful!"
+
+def get_reservations_paused():
+    """Check if reservations are globally paused."""
+    supabase = get_supabase()
+    try:
+        res = supabase.table("app_settings").select("value").eq("key", "reservations_paused").execute()
+        if res.data:
+            return res.data[0]["value"] == "true"
+    except Exception:
+        pass
+    return False
+
+def set_reservations_paused(paused):
+    """Set global reservations pause state."""
+    supabase = get_supabase()
+    try:
+        supabase.table("app_settings").upsert({
+            "key": "reservations_paused",
+            "value": "true" if paused else "false"
+        }, on_conflict="key").execute()
+        return True
+    except Exception as e:
+        st.error(f"Error updating settings: {e}")
+        return False
